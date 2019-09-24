@@ -15,6 +15,10 @@ var (
 )
 
 func main() {
+	run()
+}
+
+func run() {
 	flattenFiles()
 	// sem limit the number of goroutines running. this prevent a "To Many Files open" error
 	sem := make(chan struct{}, 50)
