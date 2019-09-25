@@ -2,64 +2,37 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
-	"strconv"
-	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 var (
 	files []string
+	sum   int64
 )
 
 func main() {
+	start := time.Now()
 	run()
+	fmt.Println(time.Now().Sub(start))
 }
 
 func run() {
 	flattenFiles()
 	// sem limit the number of goroutines running. this prevent a "To Many Files open" error
-	sem := make(chan struct{}, 50)
+	sem := make(chan struct{}, 500)
 
 	var wg sync.WaitGroup
 	wg.Add(len(files))
-
-	var sum int64
 
 	for _, file := range files {
 		sem <- struct{}{}
 
 		go func(file string) {
-			f, err := os.Open(file)
-			if err != nil {
-				panic((err))
-			}
-
-			b, err := ioutil.ReadAll(f)
-			if err != nil {
-				panic((err))
-			}
-			f.Close()
-
-			var numSum int64
-			lines := strings.Split(string(b), "\n")
-
-			for _, line := range lines {
-
-				nums := strings.Split(line, ",")
-
-				for _, n := range nums {
-					i, err := strconv.Atoi(n)
-					if err != nil {
-						panic((err))
-					}
-					numSum += int64(i)
-				}
-			}
-
-			atomic.AddInt64(&sum, numSum)
+			sumFile(file)
 			<-sem
 			wg.Done()
 
@@ -82,4 +55,58 @@ func flattenFiles() {
 			files = append(files, fileName)
 		}
 	}
+}
+
+func sumFile(name string) {
+	f, err := os.Open(name)
+	if err != nil {
+		panic((err))
+	}
+	n := readNum(f)
+	atomic.AddInt64(&sum, n)
+	f.Close()
+}
+
+func readNum(f io.Reader) int64 {
+	var b [256]byte
+	var lastVal int
+	var sum int64
+
+	for {
+		x, err := f.Read(b[:])
+
+		if err == io.EOF {
+			sum += int64(lastVal)
+			break
+		}
+
+		if err != nil {
+			panic(err)
+		}
+
+		var n int
+		c := len(b[:x])
+		for ii := 0; ii < c; ii++ {
+			if b[ii] < '0' {
+				i := concatenate(lastVal, b[n:ii])
+				sum += int64(i)
+				n = ii + 1
+				lastVal = 0
+			}
+		}
+
+		lastVal = (concatenate(lastVal, b[n:c]))
+		// fmt.Println(off, n)
+	}
+
+	return sum
+}
+
+func concatenate(last int, b []byte) int {
+	n := last
+	for _, c := range b {
+		c -= '0'
+		n = n*10 + int(c)
+	}
+	return n
 }
