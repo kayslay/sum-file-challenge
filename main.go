@@ -9,6 +9,10 @@ import (
 	"time"
 )
 
+const (
+	size = 3 * 1 << 10
+)
+
 var (
 	files []string
 	sum   int64
@@ -51,8 +55,8 @@ func run() {
 func flattenFiles() {
 	for i := 0; i < 100; i++ {
 		for j := 0; j < 10; j++ {
-			fileName := fmt.Sprintf("./files/%06d-%06d/%06d.csv", (i*10)+1, (i*10)+10, (i*10)+j+1)
-			files = append(files, fileName)
+			// fileName :=
+			files = append(files, fmt.Sprintf("./files/%06d-%06d/%06d.csv", (i*10)+1, (i*10)+10, (i*10)+j+1))
 		}
 	}
 }
@@ -62,13 +66,14 @@ func sumFile(name string) {
 	if err != nil {
 		panic((err))
 	}
+
 	n := readNum(f)
-	atomic.AddInt64(&sum, n)
 	f.Close()
+	atomic.AddInt64(&sum, n)
 }
 
 func readNum(f io.Reader) int64 {
-	var b [256]byte
+	var b [size]byte
 	var lastVal int
 	var sum int64
 
