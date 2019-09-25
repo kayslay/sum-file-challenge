@@ -23,17 +23,17 @@ func main() {
 func run() {
 	flattenFiles()
 	// sem limit the number of goroutines running. this prevent a "To Many Files open" error
-	sem := make(chan struct{}, 500)
+	// sem := make(chan struct{}, 500)
 
 	var wg sync.WaitGroup
 	wg.Add(len(files))
 
 	for _, file := range files {
-		sem <- struct{}{}
+		// sem <- struct{}{}
 
 		go func(file string) {
 			sumFile(file)
-			<-sem
+			// <-sem
 			wg.Done()
 
 		}(file)
